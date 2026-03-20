@@ -1,0 +1,39 @@
+stream.andybader.com {
+
+	handle /login* {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	handle /fulllogo.png {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	handle /stream-status* {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	route {
+		forward_auth 127.0.0.1:8081 {
+			uri /auth/check
+		}
+
+		handle_path /webrtc/* {
+			reverse_proxy 127.0.0.1:8889
+		}
+
+		handle_path /hls/* {
+			reverse_proxy 127.0.0.1:8888
+		}
+
+		handle /A_Cam* {
+			reverse_proxy 127.0.0.1:8889
+		}
+
+		handle /B_Cam* {
+			reverse_proxy 127.0.0.1:8889
+		}
+
+		root * C:\streaming\web
+		file_server
+	}
+}

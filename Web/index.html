@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tailwind Tech Streaming</title>
+  <link rel="icon" type="image/png" href="/logo.png" />
+
+  <style>
+    :root {
+      --graphite: #343638;
+      --deep-space: #0b0b0b;
+      --misty: #849fb6;
+      --cloudless: #c2d7ef;
+      --storm-watch: #b9bcc1;
+      --danger: #d97b7b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--graphite);
+      color: white;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      background: var(--deep-space);
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand img {
+      height: 36px;
+      width: auto;
+      display: block;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--misty);
+    }
+
+    .brand-subtitle {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--storm-watch);
+    }
+
+    .layout-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      color: white;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: rgba(132, 159, 182, 0.18);
+      border-color: rgba(132, 159, 182, 0.55);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .grid.single {
+      grid-template-columns: 1fr;
+    }
+
+    .panel {
+      background: var(--deep-space);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 16px;
+      overflow: hidden;
+      min-width: 0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    .panel.hidden { display: none; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .panel-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--storm-watch);
+    }
+
+    .dot.live { background: var(--misty); }
+    .dot.reconnecting { background: var(--danger); }
+
+    .panel-title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .panel-status {
+      font-size: 12px;
+      color: var(--storm-watch);
+    }
+
+    .media-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: black;
+    }
+
+    video,
+    .offline-placeholder {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    video {
+      background: black;
+    }
+
+    .offline-placeholder {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px;
+      text-align: center;
+      background:
+        radial-gradient(circle at center, rgba(132,159,182,0.08), transparent 55%),
+        black;
+    }
+
+    .offline-placeholder.visible {
+      display: flex;
+    }
+
+    .offline-placeholder img {
+      width: min(42%, 280px);
+      max-width: 280px;
+      height: auto;
+      opacity: 0.22;
+      display: block;
+    }
+
+    .offline-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--cloudless);
+    }
+
+    .offline-subtitle {
+      display: none;
+    }
+
+    .video-hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: stretch; }
+      .layout-buttons { justify-content: flex-start; }
+    }
+  </style>
+
+  <script defer src="./reader.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.6.13/hls.min.js"></script>
+</head>
+
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="./logo.png" alt="Tailwind Tech Streaming">
+    <div>
+      <div class="brand-title">Tailwind Tech Streaming</div>
+      <div class="brand-subtitle">Live multiview</div>
+    </div>
+  </div>
+
+  <div class="layout-buttons">
+    <button onclick="setLayout('both')">Both</button>
+    <button onclick="setLayout('A')">A Cam</button>
+    <button onclick="setLayout('B')">B Cam</button>
+  </div>
+</header>
+
+<main id="grid" class="grid">
+  <section id="panel-A" class="panel">
+    <div class="panel-header">
+      <div class="panel-title-wrap">
+        <div id="dot-A" class="dot"></div>
+        <div class="panel-title">A Cam</div>
+      </div>
+      <div id="status-A" class="panel-status">Checking…</div>
+    </div>
+    <div class="media-wrap">
+      <video id="video-A" autoplay muted playsinline controls></video>
+      <div id="offline-A" class="offline-placeholder">
+        <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+        <div class="offline-title">No stream</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-B" class="panel">
+    <div class="panel-header">
+      <div class="panel-title-wrap">
+        <div id="dot-B" class="dot"></div>
+        <div class="panel-title">B Cam</div>
+      </div>
+      <div id="status-B" class="panel-status">Checking…</div>
+    </div>
+    <div class="media-wrap">
+      <video id="video-B" autoplay muted playsinline controls></video>
+      <div id="offline-B" class="offline-placeholder">
+        <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+        <div class="offline-title">No stream</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const STREAMS = { A: "A_Cam", B: "B_Cam" };
+const players = {};
+const reconnectTimers = {};
+const reconnectBackoffMs = 3000;
+const statusPollMs = 5000;
+
+const streamAvailability = {
+  A: null,
+  B: null
+};
+
+function updateTitle(mode) {
+  const base = "Tailwind Tech Streaming";
+  if (mode === "A") document.title = base + " — A Cam";
+  else if (mode === "B") document.title = base + " — B Cam";
+  else document.title = base;
+}
+
+function setLayout(mode) {
+  const grid = document.getElementById("grid");
+  document.getElementById("panel-A").classList.toggle("hidden", mode === "B");
+  document.getElementById("panel-B").classList.toggle("hidden", mode === "A");
+  grid.classList.toggle("single", mode !== "both");
+  updateTitle(mode);
+}
+
+function getEls(k) {
+  return {
+    video: document.getElementById(`video-${k}`),
+    status: document.getElementById(`status-${k}`),
+    dot: document.getElementById(`dot-${k}`),
+    offline: document.getElementById(`offline-${k}`)
+  };
+}
+
+function showOfflinePlaceholder(k, show) {
+  const { video, offline } = getEls(k);
+  video.classList.toggle("video-hidden", show);
+  offline.classList.toggle("visible", show);
+}
+
+function setState(k, text, mode) {
+  const { status, dot } = getEls(k);
+  status.textContent = text;
+  dot.classList.remove("live", "reconnecting");
+  if (mode === "live") dot.classList.add("live");
+  if (mode === "reconnecting") dot.classList.add("reconnecting");
+}
+
+function stopReconnect(k) {
+  if (!reconnectTimers[k]) return;
+  clearTimeout(reconnectTimers[k]);
+  reconnectTimers[k] = null;
+}
+
+function clearVideo(k) {
+  const { video } = getEls(k);
+
+  try { video.pause(); } catch {}
+  try { video.removeAttribute("src"); } catch {}
+  try { video.srcObject = null; } catch {}
+  try { video.load(); } catch {}
+}
+
+function clearPlayer(k) {
+  stopReconnect(k);
+
+  const p = players[k];
+  if (p) {
+    try { p.reader?.close(); } catch {}
+    try { p.hls?.destroy(); } catch {}
+  }
+
+  delete players[k];
+  clearVideo(k);
+}
+
+function markNoStream(k) {
+  clearPlayer(k);
+  setState(k, "No stream");
+  showOfflinePlaceholder(k, true);
+}
+
+function markLive(k, label) {
+  setState(k, label, "live");
+  showOfflinePlaceholder(k, false);
+}
+
+function scheduleReconnect(k) {
+  if (streamAvailability[k] !== true) {
+    markNoStream(k);
+    return;
+  }
+
+  if (reconnectTimers[k]) return;
+
+  setState(k, "Reconnecting…", "reconnecting");
+
+  reconnectTimers[k] = setTimeout(() => {
+    reconnectTimers[k] = null;
+    connectStream(k, STREAMS[k], true);
+  }, reconnectBackoffMs);
+}
+
+function connectHls(k, name) {
+  if (streamAvailability[k] !== true) {
+    markNoStream(k);
+    return;
+  }
+
+  const { video } = getEls(k);
+  const url = `/hls/${name}/index.m3u8`;
+
+  clearPlayer(k);
+  setState(k, "HLS");
+
+  if (video.canPlayType("application/vnd.apple.mpegurl")) {
+    video.src = url;
+    video.play()
+      .then(() => markLive(k, "HLS"))
+      .catch(() => scheduleReconnect(k));
+    return;
+  }
+
+  if (window.Hls && Hls.isSupported()) {
+    const hls = new Hls({ lowLatencyMode: true });
+    players[k] = { hls };
+
+    hls.loadSource(url);
+    hls.attachMedia(video);
+
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.play()
+        .then(() => markLive(k, "HLS"))
+        .catch(() => scheduleReconnect(k));
+    });
+
+    hls.on(Hls.Events.ERROR, (_, data) => {
+      if (data?.fatal) {
+        console.error(`[${k}] HLS fatal error`, data);
+        scheduleReconnect(k);
+      }
+    });
+
+    return;
+  }
+
+  scheduleReconnect(k);
+}
+
+function connectStream(k, name, isReconnect = false) {
+  if (streamAvailability[k] !== true) {
+    markNoStream(k);
+    return;
+  }
+
+  const { video } = getEls(k);
+
+  clearPlayer(k);
+  setState(k, isReconnect ? "Reconnecting…" : "Connecting…");
+
+  try {
+    const reader = new MediaMTXWebRTCReader({
+      url: `${window.location.origin}/webrtc/${name}/whep`,
+      onTrack: (evt) => {
+        if (streamAvailability[k] !== true) {
+          markNoStream(k);
+          return;
+        }
+
+        video.srcObject = evt.streams[0];
+        players[k] = { reader };
+
+        video.play().catch(() => {});
+        markLive(k, "WebRTC");
+      },
+      onError: (err) => {
+        console.error(`[${k}] WebRTC error:`, err);
+        setState(k, "WebRTC failed");
+        connectHls(k, name);
+      }
+    });
+
+    players[k] = { reader };
+
+    video.onerror = () => {
+      console.error(`[${k}] video error event`);
+      scheduleReconnect(k);
+    };
+
+    video.onstalled = () => {
+      console.error(`[${k}] video stalled event`);
+      scheduleReconnect(k);
+    };
+  } catch (err) {
+    console.error(`[${k}] WebRTC setup exception:`, err);
+    connectHls(k, name);
+  }
+}
+
+function applyStreamStatus(data) {
+  streamAvailability.A = data.A_Cam === true;
+  streamAvailability.B = data.B_Cam === true;
+}
+
+function syncLayoutToAvailability() {
+  const a = streamAvailability.A === true;
+  const b = streamAvailability.B === true;
+
+  if (a && b) setLayout("both");
+  else if (a) setLayout("A");
+  else if (b) setLayout("B");
+  else setLayout("both");
+}
+
+function syncPlayersToAvailability() {
+  for (const k of ["A", "B"]) {
+    const live = streamAvailability[k] === true;
+    const hasPlayer = !!players[k];
+
+    if (!live) {
+      markNoStream(k);
+      continue;
+    }
+
+    if (!hasPlayer) {
+      connectStream(k, STREAMS[k]);
+    }
+  }
+}
+
+async function refreshStreamStatus() {
+  const res = await fetch("/stream-status", { cache: "no-store" });
+  const data = await res.json();
+
+  applyStreamStatus(data);
+  syncLayoutToAvailability();
+  syncPlayersToAvailability();
+}
+
+async function pollStreamStatus() {
+  try {
+    const prevA = streamAvailability.A;
+    const prevB = streamAvailability.B;
+
+    await refreshStreamStatus();
+
+    if (prevA === false && streamAvailability.A === true && !players.A) {
+      connectStream("A", STREAMS.A);
+    }
+
+    if (prevB === false && streamAvailability.B === true && !players.B) {
+      connectStream("B", STREAMS.B);
+    }
+  } catch (err) {
+    console.error("stream-status poll failed", err);
+  }
+}
+
+window.addEventListener("load", async () => {
+  try {
+    await refreshStreamStatus();
+  } catch (err) {
+    console.error("initial stream-status fetch failed", err);
+
+    // Safe fallback if the status endpoint is briefly unavailable.
+    streamAvailability.A = true;
+    streamAvailability.B = true;
+    setLayout("both");
+    connectStream("A", STREAMS.A);
+    connectStream("B", STREAMS.B);
+  }
+
+  setInterval(pollStreamStatus, statusPollMs);
+});
+</script>
+</body>
+</html>
