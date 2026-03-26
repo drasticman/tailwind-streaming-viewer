@@ -1,10 +1,23 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tailwind Tech Streaming</title>
   <link rel="icon" type="image/png" href="/logo.png" />
+  <meta property="og:title" content="Tailwind Tech Streaming" />
+  <meta property="og:description" content="Remote multiview feed with synced audio." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://stream.andybader.com/" />
+  <meta property="og:image" content="https://stream.andybader.com/share-preview.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Tailwind Tech Streaming" />
+  <meta name="twitter:description" content="Remote multiview feed with synced audio." />
+  <meta name="twitter:image" content="https://stream.andybader.com/share-preview.png" />
 
   <style>
     :root {
@@ -16,7 +29,9 @@
       --danger: #d97b7b;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -32,10 +47,11 @@
       gap: 16px;
       padding: 14px 16px;
       background: var(--deep-space);
-      border-bottom: 1px solid rgba(255,255,255,0.10);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
       position: sticky;
       top: 0;
       z-index: 10;
+      flex-wrap: wrap;
     }
 
     .brand {
@@ -49,6 +65,7 @@
       height: 36px;
       width: auto;
       display: block;
+      flex: 0 0 auto;
     }
 
     .brand-title {
@@ -65,6 +82,25 @@
       color: var(--storm-watch);
     }
 
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      margin-left: auto;
+    }
+
+    .mode-group {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      z-index: 50;
+    }
+
+    .mode-buttons,
     .layout-buttons {
       display: flex;
       gap: 8px;
@@ -72,21 +108,82 @@
       justify-content: flex-end;
     }
 
-    button {
+    .mode-button,
+    .layout-button,
+    .info-button {
       appearance: none;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.04);
       color: white;
       border-radius: 10px;
       padding: 9px 12px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
     }
 
-    button:hover {
+    .mode-button:hover,
+    .layout-button:hover,
+    .info-button:hover {
       background: rgba(132, 159, 182, 0.18);
       border-color: rgba(132, 159, 182, 0.55);
+    }
+
+    .mode-button.active,
+    .layout-button.active {
+      background: rgba(132, 159, 182, 0.22);
+      border-color: rgba(132, 159, 182, 0.80);
+      color: var(--cloudless);
+    }
+
+    .mode-button:focus-visible,
+    .layout-button:focus-visible,
+    .info-button:focus-visible {
+      outline: 2px solid rgba(194, 215, 239, 0.65);
+      outline-offset: 2px;
+    }
+
+    .info-button {
+      width: 38px;
+      min-width: 38px;
+      padding: 9px 0;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    .info-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: min(320px, calc(100vw - 32px));
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(11, 11, 11, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      color: var(--cloudless);
+      font-size: 13px;
+      line-height: 1.45;
+      z-index: 60;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 120ms ease, transform 120ms ease;
+    }
+
+    .info-popover.popover-hidden {
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+    }
+
+    .info-popover strong {
+      color: white;
+    }
+
+    .hidden {
+      display: none !important;
     }
 
     .grid {
@@ -100,16 +197,18 @@
       grid-template-columns: 1fr;
     }
 
+    .single-panel-wrap {
+      padding: 14px;
+    }
+
     .panel {
       background: var(--deep-space);
-      border: 1px solid rgba(255,255,255,0.10);
+      border: 1px solid rgba(255, 255, 255, 0.10);
       border-radius: 16px;
       overflow: hidden;
       min-width: 0;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     }
-
-    .panel.hidden { display: none; }
 
     .panel-header {
       display: flex;
@@ -117,8 +216,8 @@
       justify-content: space-between;
       gap: 12px;
       padding: 10px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
     }
 
     .panel-title-wrap {
@@ -134,8 +233,13 @@
       background: var(--storm-watch);
     }
 
-    .dot.live { background: var(--misty); }
-    .dot.reconnecting { background: var(--danger); }
+    .dot.live {
+      background: var(--misty);
+    }
+
+    .dot.reconnecting {
+      background: var(--danger);
+    }
 
     .panel-title {
       font-size: 15px;
@@ -174,7 +278,7 @@
       padding: 24px;
       text-align: center;
       background:
-        radial-gradient(circle at center, rgba(132,159,182,0.08), transparent 55%),
+        radial-gradient(circle at center, rgba(132, 159, 182, 0.08), transparent 55%),
         black;
     }
 
@@ -197,18 +301,103 @@
       color: var(--cloudless);
     }
 
-    .offline-subtitle {
-      display: none;
-    }
-
     .video-hidden {
       display: none;
     }
 
     @media (max-width: 900px) {
-      .grid { grid-template-columns: 1fr; }
-      .topbar { flex-direction: column; align-items: stretch; }
-      .layout-buttons { justify-content: flex-start; }
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .single-panel-wrap {
+        padding: 10px;
+      }
+
+      .topbar {
+        position: static;
+        padding: 10px 12px;
+        gap: 10px;
+      }
+
+      .brand {
+        gap: 10px;
+      }
+
+      .brand img {
+        height: 28px;
+      }
+
+      .brand-title {
+        font-size: 16px;
+      }
+
+      .brand-subtitle {
+        display: none;
+      }
+
+      .topbar-controls {
+        margin-left: 0;
+        justify-content: flex-start;
+        gap: 8px;
+      }
+
+      .mode-buttons,
+      .layout-buttons {
+        justify-content: flex-start;
+        gap: 6px;
+      }
+
+      .mode-group {
+        width: 100%;
+      }
+
+      .mode-button,
+      .layout-button,
+      .info-button {
+        padding: 7px 10px;
+        font-size: 13px;
+        border-radius: 9px;
+      }
+
+      .info-button {
+        width: 34px;
+        min-width: 34px;
+        padding: 7px 0;
+      }
+
+      .info-popover {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: auto;
+        width: min(320px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        padding: 14px 16px;
+        border-radius: 14px;
+        font-size: 14px;
+        line-height: 1.5;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42);
+        z-index: 60;
+      }
+
+      .panel {
+        border-radius: 14px;
+      }
+
+      .panel-header {
+        padding: 8px 10px;
+      }
+
+      .panel-title {
+        font-size: 14px;
+      }
+
+      .panel-status {
+        font-size: 11px;
+      }
     }
   </style>
 
@@ -217,334 +406,643 @@
 </head>
 
 <body>
-<header class="topbar">
-  <div class="brand">
-    <img src="./logo.png" alt="Tailwind Tech Streaming">
-    <div>
-      <div class="brand-title">Tailwind Tech Streaming</div>
-      <div class="brand-subtitle">Live multiview</div>
-    </div>
-  </div>
-
-  <div class="layout-buttons">
-    <button onclick="setLayout('both')">Both</button>
-    <button onclick="setLayout('A')">A Cam</button>
-    <button onclick="setLayout('B')">B Cam</button>
-  </div>
-</header>
-
-<main id="grid" class="grid">
-  <section id="panel-A" class="panel">
-    <div class="panel-header">
-      <div class="panel-title-wrap">
-        <div id="dot-A" class="dot"></div>
-        <div class="panel-title">A Cam</div>
-      </div>
-      <div id="status-A" class="panel-status">Checking…</div>
-    </div>
-    <div class="media-wrap">
-      <video id="video-A" autoplay muted playsinline controls></video>
-      <div id="offline-A" class="offline-placeholder">
-        <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
-        <div class="offline-title">No stream</div>
+  <header class="topbar">
+    <div class="brand">
+      <img src="./logo.png" alt="Tailwind Tech Streaming">
+      <div>
+        <div class="brand-title">Tailwind Tech Streaming</div>
+        <div id="brand-subtitle" class="brand-subtitle">Low-latency separate camera viewer</div>
       </div>
     </div>
-  </section>
 
-  <section id="panel-B" class="panel">
-    <div class="panel-header">
-      <div class="panel-title-wrap">
-        <div id="dot-B" class="dot"></div>
-        <div class="panel-title">B Cam</div>
+    <div class="topbar-controls">
+      <div class="mode-group">
+        <div class="mode-buttons">
+          <button id="mode-btn-live" class="mode-button" onclick="handleModeButton('live')">On Set</button>
+          <button id="mode-btn-audio" class="mode-button" onclick="handleModeButton('audio')">Remote</button>
+        </div>
+
+        <button id="info-button" class="info-button" type="button" aria-label="Viewer mode information"
+          aria-expanded="false" onclick="toggleInfoPopover()">?</button>
+
+        <div id="info-popover" class="info-popover popover-hidden" role="dialog" aria-label="Viewer mode information">
+          <div><strong>On Set:</strong> very low-latency viewer with separate camera feeds.</div>
+          <div style="margin-top: 8px;"><strong>Remote:</strong> combined multiview feed synced with audio, with a
+            slight delay.</div>
+        </div>
       </div>
-      <div id="status-B" class="panel-status">Checking…</div>
-    </div>
-    <div class="media-wrap">
-      <video id="video-B" autoplay muted playsinline controls></video>
-      <div id="offline-B" class="offline-placeholder">
-        <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
-        <div class="offline-title">No stream</div>
+
+      <div id="layout-buttons" class="layout-buttons">
+        <button id="btn-multi" class="layout-button" onclick="handleLayoutButton('multi')">Multi</button>
+        <button id="btn-A" class="layout-button" onclick="handleLayoutButton('A')">A Cam</button>
+        <button id="btn-B" class="layout-button" onclick="handleLayoutButton('B')">B Cam</button>
+        <button id="btn-C" class="layout-button" onclick="handleLayoutButton('C')">C Cam</button>
       </div>
     </div>
-  </section>
-</main>
+  </header>
 
-<script>
-const STREAMS = { A: "A_Cam", B: "B_Cam" };
-const players = {};
-const reconnectTimers = {};
-const reconnectBackoffMs = 3000;
-const statusPollMs = 5000;
+  <main>
+    <section id="live-grid" class="grid">
+      <section id="panel-A" class="panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <div id="dot-A" class="dot"></div>
+            <div class="panel-title">A Cam</div>
+          </div>
+          <div id="status-A" class="panel-status">Checking…</div>
+        </div>
+        <div class="media-wrap">
+          <video id="video-A" autoplay muted playsinline controls></video>
+          <div id="offline-A" class="offline-placeholder">
+            <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+            <div class="offline-title">No stream</div>
+          </div>
+        </div>
+      </section>
 
-const streamAvailability = {
-  A: null,
-  B: null
-};
+      <section id="panel-B" class="panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <div id="dot-B" class="dot"></div>
+            <div class="panel-title">B Cam</div>
+          </div>
+          <div id="status-B" class="panel-status">Checking…</div>
+        </div>
+        <div class="media-wrap">
+          <video id="video-B" autoplay muted playsinline controls></video>
+          <div id="offline-B" class="offline-placeholder">
+            <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+            <div class="offline-title">No stream</div>
+          </div>
+        </div>
+      </section>
 
-function updateTitle(mode) {
-  const base = "Tailwind Tech Streaming";
-  if (mode === "A") document.title = base + " — A Cam";
-  else if (mode === "B") document.title = base + " — B Cam";
-  else document.title = base;
-}
+      <section id="panel-C" class="panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <div id="dot-C" class="dot"></div>
+            <div class="panel-title">C Cam</div>
+          </div>
+          <div id="status-C" class="panel-status">Checking…</div>
+        </div>
+        <div class="media-wrap">
+          <video id="video-C" autoplay muted playsinline controls></video>
+          <div id="offline-C" class="offline-placeholder">
+            <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+            <div class="offline-title">No stream</div>
+          </div>
+        </div>
+      </section>
+    </section>
 
-function setLayout(mode) {
-  const grid = document.getElementById("grid");
-  document.getElementById("panel-A").classList.toggle("hidden", mode === "B");
-  document.getElementById("panel-B").classList.toggle("hidden", mode === "A");
-  grid.classList.toggle("single", mode !== "both");
-  updateTitle(mode);
-}
+    <section id="audio-wrap" class="single-panel-wrap hidden">
+      <section id="panel-M" class="panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <div id="dot-M" class="dot"></div>
+            <div class="panel-title">Remote Feed</div>
+          </div>
+          <div id="status-M" class="panel-status">Checking…</div>
+        </div>
+        <div class="media-wrap">
+          <video id="video-M" autoplay playsinline controls></video>
+          <div id="offline-M" class="offline-placeholder">
+            <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+            <div class="offline-title">No stream</div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
 
-function getEls(k) {
-  return {
-    video: document.getElementById(`video-${k}`),
-    status: document.getElementById(`status-${k}`),
-    dot: document.getElementById(`dot-${k}`),
-    offline: document.getElementById(`offline-${k}`)
-  };
-}
+  <script>
+    const LIVE_STREAMS = { A: "A_Cam", B: "B_Cam", C: "C_Cam" };
+    const LIVE_KEYS = ["A", "B", "C"];
+    const AUDIO_STREAM = "MultiAudio_clean";
 
-function showOfflinePlaceholder(k, show) {
-  const { video, offline } = getEls(k);
-  video.classList.toggle("video-hidden", show);
-  offline.classList.toggle("visible", show);
-}
+    const statusPollMs = 5000;
+    const reconnectBackoffMs = 3000;
 
-function setState(k, text, mode) {
-  const { status, dot } = getEls(k);
-  status.textContent = text;
-  dot.classList.remove("live", "reconnecting");
-  if (mode === "live") dot.classList.add("live");
-  if (mode === "reconnecting") dot.classList.add("reconnecting");
-}
+    const VIEWER_MODE_STORAGE_KEY = "tailwind-viewer-mode";
+    const LIVE_LAYOUT_STORAGE_KEY = "tailwind-live-layout";
 
-function stopReconnect(k) {
-  if (!reconnectTimers[k]) return;
-  clearTimeout(reconnectTimers[k]);
-  reconnectTimers[k] = null;
-}
+    const livePlayers = {};
+    const liveReconnectTimers = {};
+    let audioPlayer = null;
+    let audioReconnectTimer = null;
 
-function clearVideo(k) {
-  const { video } = getEls(k);
+    const streamAvailability = {
+      A: null,
+      B: null,
+      C: null,
+      M: null
+    };
 
-  try { video.pause(); } catch {}
-  try { video.removeAttribute("src"); } catch {}
-  try { video.srcObject = null; } catch {}
-  try { video.load(); } catch {}
-}
+    const params = new URLSearchParams(window.location.search);
+    const urlMode = params.get("mode");
 
-function clearPlayer(k) {
-  stopReconnect(k);
+    let currentMode = urlMode || localStorage.getItem(VIEWER_MODE_STORAGE_KEY) || "audio";
+    let currentLayout = localStorage.getItem(LIVE_LAYOUT_STORAGE_KEY) || "multi";
+    let userLockedLayout = false;
 
-  const p = players[k];
-  if (p) {
-    try { p.reader?.close(); } catch {}
-    try { p.hls?.destroy(); } catch {}
-  }
+    function updateDocumentTitle() {
+      const base = "Tailwind Tech Streaming";
 
-  delete players[k];
-  clearVideo(k);
-}
-
-function markNoStream(k) {
-  clearPlayer(k);
-  setState(k, "No stream");
-  showOfflinePlaceholder(k, true);
-}
-
-function markLive(k, label) {
-  setState(k, label, "live");
-  showOfflinePlaceholder(k, false);
-}
-
-function scheduleReconnect(k) {
-  if (streamAvailability[k] !== true) {
-    markNoStream(k);
-    return;
-  }
-
-  if (reconnectTimers[k]) return;
-
-  setState(k, "Reconnecting…", "reconnecting");
-
-  reconnectTimers[k] = setTimeout(() => {
-    reconnectTimers[k] = null;
-    connectStream(k, STREAMS[k], true);
-  }, reconnectBackoffMs);
-}
-
-function connectHls(k, name) {
-  if (streamAvailability[k] !== true) {
-    markNoStream(k);
-    return;
-  }
-
-  const { video } = getEls(k);
-  const url = `/hls/${name}/index.m3u8`;
-
-  clearPlayer(k);
-  setState(k, "HLS");
-
-  if (video.canPlayType("application/vnd.apple.mpegurl")) {
-    video.src = url;
-    video.play()
-      .then(() => markLive(k, "HLS"))
-      .catch(() => scheduleReconnect(k));
-    return;
-  }
-
-  if (window.Hls && Hls.isSupported()) {
-    const hls = new Hls({ lowLatencyMode: true });
-    players[k] = { hls };
-
-    hls.loadSource(url);
-    hls.attachMedia(video);
-
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      video.play()
-        .then(() => markLive(k, "HLS"))
-        .catch(() => scheduleReconnect(k));
-    });
-
-    hls.on(Hls.Events.ERROR, (_, data) => {
-      if (data?.fatal) {
-        console.error(`[${k}] HLS fatal error`, data);
-        scheduleReconnect(k);
+      if (currentMode === "audio") {
+        document.title = `${base} — Remote`;
+        return;
       }
-    });
 
-    return;
-  }
+      if (currentLayout === "A") document.title = `${base} — On Set A Cam`;
+      else if (currentLayout === "B") document.title = `${base} — On Set B Cam`;
+      else if (currentLayout === "C") document.title = `${base} — On Set C Cam`;
+      else document.title = `${base} — On Set`;
+    }
 
-  scheduleReconnect(k);
-}
+    function updateModeButtons() {
+      const liveBtn = document.getElementById("mode-btn-live");
+      const audioBtn = document.getElementById("mode-btn-audio");
 
-function connectStream(k, name, isReconnect = false) {
-  if (streamAvailability[k] !== true) {
-    markNoStream(k);
-    return;
-  }
+      liveBtn.classList.toggle("active", currentMode === "live");
+      audioBtn.classList.toggle("active", currentMode === "audio");
 
-  const { video } = getEls(k);
+      liveBtn.setAttribute("aria-pressed", currentMode === "live" ? "true" : "false");
+      audioBtn.setAttribute("aria-pressed", currentMode === "audio" ? "true" : "false");
+    }
 
-  clearPlayer(k);
-  setState(k, isReconnect ? "Reconnecting…" : "Connecting…");
+    function updateLayoutButtons() {
+      const ids = ["multi", "A", "B", "C"];
+      for (const id of ids) {
+        const btn = document.getElementById(`btn-${id}`);
+        if (!btn) continue;
+        btn.classList.toggle("active", id === currentLayout);
+        btn.setAttribute("aria-pressed", id === currentLayout ? "true" : "false");
+      }
+    }
 
-  try {
-    const reader = new MediaMTXWebRTCReader({
-      url: `${window.location.origin}/webrtc/${name}/whep`,
-      onTrack: (evt) => {
-        if (streamAvailability[k] !== true) {
-          markNoStream(k);
-          return;
+    function updateSubtitle() {
+      const subtitle = document.getElementById("brand-subtitle");
+      subtitle.textContent = currentMode === "live"
+        ? "Low-latency separate camera viewer"
+        : "Combined multiview with synced audio";
+    }
+
+    function toggleInfoPopover(forceOpen = null) {
+      const popover = document.getElementById("info-popover");
+      const button = document.getElementById("info-button");
+      const shouldOpen = forceOpen === null ? popover.classList.contains("popover-hidden") : forceOpen;
+
+      popover.classList.toggle("popover-hidden", !shouldOpen);
+      button.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    }
+
+    function handleModeButton(mode) {
+      if (mode !== "live" && mode !== "audio") return;
+
+      currentMode = mode;
+      localStorage.setItem(VIEWER_MODE_STORAGE_KEY, currentMode);
+
+      applyMode();
+      syncPlayersForCurrentMode();
+      toggleInfoPopover(false);
+
+      try {
+        document.activeElement?.blur?.();
+      } catch { }
+    }
+
+    function handleLayoutButton(layout) {
+      userLockedLayout = true;
+      currentLayout = layout;
+      localStorage.setItem(LIVE_LAYOUT_STORAGE_KEY, currentLayout);
+      applyLayout();
+
+      try {
+        document.activeElement?.blur?.();
+      } catch { }
+    }
+
+    function applyLayout() {
+      const grid = document.getElementById("live-grid");
+
+      document.getElementById("panel-A").classList.toggle("hidden", currentLayout !== "multi" && currentLayout !== "A");
+      document.getElementById("panel-B").classList.toggle("hidden", currentLayout !== "multi" && currentLayout !== "B");
+      document.getElementById("panel-C").classList.toggle("hidden", currentLayout !== "multi" && currentLayout !== "C");
+
+      grid.classList.toggle("single", currentLayout !== "multi");
+      updateLayoutButtons();
+      updateDocumentTitle();
+    }
+
+    function applyMode() {
+      const liveGrid = document.getElementById("live-grid");
+      const audioWrap = document.getElementById("audio-wrap");
+      const layoutButtons = document.getElementById("layout-buttons");
+
+      if (currentMode === "live") {
+        liveGrid.classList.remove("hidden");
+        audioWrap.classList.add("hidden");
+        layoutButtons.classList.remove("hidden");
+        applyLayout();
+      } else {
+        liveGrid.classList.add("hidden");
+        audioWrap.classList.remove("hidden");
+        layoutButtons.classList.add("hidden");
+      }
+
+      updateModeButtons();
+      updateSubtitle();
+      updateDocumentTitle();
+    }
+
+    function getLiveEls(k) {
+      return {
+        video: document.getElementById(`video-${k}`),
+        status: document.getElementById(`status-${k}`),
+        dot: document.getElementById(`dot-${k}`),
+        offline: document.getElementById(`offline-${k}`)
+      };
+    }
+
+    function getAudioEls() {
+      return {
+        video: document.getElementById("video-M"),
+        status: document.getElementById("status-M"),
+        dot: document.getElementById("dot-M"),
+        offline: document.getElementById("offline-M")
+      };
+    }
+
+    function showOfflinePlaceholder(els, show) {
+      els.video.classList.toggle("video-hidden", show);
+      els.offline.classList.toggle("visible", show);
+    }
+
+    function setPanelState(els, text, mode) {
+      els.status.textContent = text;
+      els.dot.classList.remove("live", "reconnecting");
+
+      if (mode === "live") els.dot.classList.add("live");
+      if (mode === "reconnecting") els.dot.classList.add("reconnecting");
+    }
+
+    function clearVideo(video) {
+      try { video.pause(); } catch { }
+      try { video.removeAttribute("src"); } catch { }
+      try { video.srcObject = null; } catch { }
+      try { video.load(); } catch { }
+    }
+
+    function stopLiveReconnect(k) {
+      if (!liveReconnectTimers[k]) return;
+      clearTimeout(liveReconnectTimers[k]);
+      liveReconnectTimers[k] = null;
+    }
+
+    function stopAudioReconnect() {
+      if (!audioReconnectTimer) return;
+      clearTimeout(audioReconnectTimer);
+      audioReconnectTimer = null;
+    }
+
+    function clearLivePlayer(k) {
+      stopLiveReconnect(k);
+
+      const player = livePlayers[k];
+      if (player) {
+        try { player.reader?.close(); } catch { }
+      }
+
+      delete livePlayers[k];
+      clearVideo(getLiveEls(k).video);
+    }
+
+    function clearAllLivePlayers() {
+      for (const k of LIVE_KEYS) {
+        clearLivePlayer(k);
+      }
+    }
+
+    function clearAudioPlayer() {
+      stopAudioReconnect();
+
+      if (audioPlayer && audioPlayer.kind === "hlsjs") {
+        try { audioPlayer.hls?.destroy(); } catch { }
+      }
+
+      audioPlayer = null;
+      clearVideo(getAudioEls().video);
+    }
+
+    function markLiveNoStream(k) {
+      clearLivePlayer(k);
+      const els = getLiveEls(k);
+      setPanelState(els, "No stream");
+      showOfflinePlaceholder(els, true);
+    }
+
+    function markAudioNoStream() {
+      clearAudioPlayer();
+      const els = getAudioEls();
+      setPanelState(els, "No stream");
+      showOfflinePlaceholder(els, true);
+    }
+
+    function markLiveOk(k, label) {
+      const els = getLiveEls(k);
+      setPanelState(els, label, "live");
+      showOfflinePlaceholder(els, false);
+    }
+
+    function markAudioOk(label) {
+      const els = getAudioEls();
+      setPanelState(els, label, "live");
+      showOfflinePlaceholder(els, false);
+    }
+
+    function scheduleLiveReconnect(k) {
+      if (currentMode !== "live") return;
+
+      if (streamAvailability[k] !== true) {
+        markLiveNoStream(k);
+        return;
+      }
+
+      if (liveReconnectTimers[k]) return;
+
+      const els = getLiveEls(k);
+      setPanelState(els, "Reconnecting…", "reconnecting");
+
+      liveReconnectTimers[k] = setTimeout(() => {
+        liveReconnectTimers[k] = null;
+        connectLiveStream(k, LIVE_STREAMS[k], true);
+      }, reconnectBackoffMs);
+    }
+
+    function scheduleAudioReconnect() {
+      if (currentMode !== "audio") return;
+
+      if (streamAvailability.M !== true) {
+        markAudioNoStream();
+        return;
+      }
+
+      if (audioReconnectTimer) return;
+
+      const els = getAudioEls();
+      setPanelState(els, "Reconnecting…", "reconnecting");
+
+      audioReconnectTimer = setTimeout(() => {
+        audioReconnectTimer = null;
+        connectAudioStream(true);
+      }, reconnectBackoffMs);
+    }
+
+    function connectLiveStream(k, name, isReconnect = false) {
+      if (currentMode !== "live") return;
+
+      if (streamAvailability[k] !== true) {
+        markLiveNoStream(k);
+        return;
+      }
+
+      const els = getLiveEls(k);
+      const { video } = els;
+
+      clearLivePlayer(k);
+      setPanelState(els, isReconnect ? "Reconnecting…" : "Connecting…");
+      showOfflinePlaceholder(els, false);
+
+      video.muted = true;
+      video.defaultMuted = true;
+
+      try {
+        const reader = new MediaMTXWebRTCReader({
+          url: `${window.location.origin}/webrtc/${name}/whep`,
+          onTrack: (evt) => {
+            if (currentMode !== "live" || streamAvailability[k] !== true) {
+              clearLivePlayer(k);
+              return;
+            }
+
+            video.srcObject = evt.streams[0];
+            livePlayers[k] = { reader };
+
+            video.play().catch(() => { });
+            markLiveOk(k, "WebRTC");
+          },
+          onError: (err) => {
+            console.error(`[${k}] WebRTC error:`, err);
+            scheduleLiveReconnect(k);
+          }
+        });
+
+        livePlayers[k] = { reader };
+
+        video.onerror = () => {
+          console.error(`[${k}] video error event`);
+          scheduleLiveReconnect(k);
+        };
+
+        video.onstalled = () => {
+          console.error(`[${k}] video stalled event`);
+          scheduleLiveReconnect(k);
+        };
+      } catch (err) {
+        console.error(`[${k}] WebRTC setup exception:`, err);
+        scheduleLiveReconnect(k);
+      }
+    }
+
+    function connectAudioStream(isReconnect = false) {
+      if (currentMode !== "audio") return;
+
+      if (streamAvailability.M !== true) {
+        markAudioNoStream();
+        return;
+      }
+
+      const els = getAudioEls();
+      const { video } = els;
+      const url = `/hls/${AUDIO_STREAM}/index.m3u8`;
+
+      clearAudioPlayer();
+      setPanelState(els, isReconnect ? "Reconnecting…" : "Connecting…");
+      showOfflinePlaceholder(els, false);
+
+      video.muted = false;
+      video.defaultMuted = false;
+
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = url;
+        audioPlayer = { kind: "native" };
+
+        video.onloadedmetadata = () => {
+          markAudioOk("HLS");
+          video.play().catch((err) => {
+            console.warn("[MultiAudio_clean] native autoplay blocked or failed:", err);
+          });
+        };
+
+        video.onerror = () => {
+          console.error("[MultiAudio_clean] native HLS video error");
+          scheduleAudioReconnect();
+        };
+
+        return;
+      }
+
+      if (window.Hls && Hls.isSupported()) {
+        const hls = new Hls({ lowLatencyMode: true });
+        audioPlayer = { kind: "hlsjs", hls };
+
+        hls.loadSource(url);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          markAudioOk("HLS");
+          video.play().catch((err) => {
+            console.warn("[MultiAudio_clean] hls.js autoplay blocked or failed:", err);
+          });
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data?.fatal) {
+            console.error("[MultiAudio_clean] HLS fatal error", data);
+            scheduleAudioReconnect();
+          }
+        });
+
+        video.onerror = () => {
+          console.error("[MultiAudio_clean] HLS video element error");
+          scheduleAudioReconnect();
+        };
+
+        return;
+      }
+
+      setPanelState(els, "HLS unsupported");
+      showOfflinePlaceholder(els, true);
+    }
+
+    function applyStreamStatus(data) {
+      streamAvailability.A = data.A_Cam === true;
+      streamAvailability.B = data.B_Cam === true;
+      streamAvailability.C = data.C_Cam === true;
+      streamAvailability.M = data.MultiAudio_clean === true;
+    }
+
+    function getLiveKeys() {
+      return LIVE_KEYS.filter((k) => streamAvailability[k] === true);
+    }
+
+    function syncLayoutToAvailability() {
+      if (currentMode !== "live") return;
+      if (userLockedLayout) return;
+
+      const liveKeys = getLiveKeys();
+
+      if (liveKeys.length >= 2) currentLayout = "multi";
+      else if (liveKeys.length === 1) currentLayout = liveKeys[0];
+      else currentLayout = "multi";
+
+      localStorage.setItem(LIVE_LAYOUT_STORAGE_KEY, currentLayout);
+      applyLayout();
+    }
+
+    function syncLivePlayers() {
+      for (const k of LIVE_KEYS) {
+        const live = streamAvailability[k] === true;
+        const hasPlayer = !!livePlayers[k];
+
+        if (!live) {
+          markLiveNoStream(k);
+          continue;
         }
 
-        video.srcObject = evt.streams[0];
-        players[k] = { reader };
+        if (!hasPlayer) {
+          connectLiveStream(k, LIVE_STREAMS[k]);
+        }
+      }
+    }
 
-        video.play().catch(() => {});
-        markLive(k, "WebRTC");
-      },
-      onError: (err) => {
-        console.error(`[${k}] WebRTC error:`, err);
-        setState(k, "WebRTC failed");
-        connectHls(k, name);
+    function syncAudioPlayer() {
+      if (streamAvailability.M !== true) {
+        markAudioNoStream();
+        return;
+      }
+
+      if (!audioPlayer) {
+        connectAudioStream();
+      }
+    }
+
+    function syncPlayersForCurrentMode() {
+      if (currentMode === "live") {
+        clearAudioPlayer();
+        syncLayoutToAvailability();
+        syncLivePlayers();
+      } else {
+        clearAllLivePlayers();
+        syncAudioPlayer();
+      }
+    }
+
+    async function refreshStreamStatus() {
+      const res = await fetch("/stream-status", { cache: "no-store" });
+      const data = await res.json();
+
+      applyStreamStatus(data);
+      syncPlayersForCurrentMode();
+    }
+
+    async function pollStreamStatus() {
+      try {
+        await refreshStreamStatus();
+      } catch (err) {
+        console.error("stream-status poll failed", err);
+      }
+    }
+
+    window.addEventListener("click", (event) => {
+      const popover = document.getElementById("info-popover");
+      const button = document.getElementById("info-button");
+      if (popover.classList.contains("popover-hidden")) return;
+      if (popover.contains(event.target) || button.contains(event.target)) return;
+      toggleInfoPopover(false);
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        toggleInfoPopover(false);
       }
     });
 
-    players[k] = { reader };
+    window.addEventListener("load", async () => {
+      updateModeButtons();
+      updateLayoutButtons();
+      updateSubtitle();
+      applyMode();
 
-    video.onerror = () => {
-      console.error(`[${k}] video error event`);
-      scheduleReconnect(k);
-    };
+      try {
+        await refreshStreamStatus();
+      } catch (err) {
+        console.error("initial stream-status fetch failed", err);
 
-    video.onstalled = () => {
-      console.error(`[${k}] video stalled event`);
-      scheduleReconnect(k);
-    };
-  } catch (err) {
-    console.error(`[${k}] WebRTC setup exception:`, err);
-    connectHls(k, name);
-  }
-}
+        if (currentMode === "live") {
+          for (const k of LIVE_KEYS) {
+            streamAvailability[k] = false;
+            markLiveNoStream(k);
+          }
+        } else {
+          streamAvailability.M = false;
+          markAudioNoStream();
+        }
+      }
 
-function applyStreamStatus(data) {
-  streamAvailability.A = data.A_Cam === true;
-  streamAvailability.B = data.B_Cam === true;
-}
-
-function syncLayoutToAvailability() {
-  const a = streamAvailability.A === true;
-  const b = streamAvailability.B === true;
-
-  if (a && b) setLayout("both");
-  else if (a) setLayout("A");
-  else if (b) setLayout("B");
-  else setLayout("both");
-}
-
-function syncPlayersToAvailability() {
-  for (const k of ["A", "B"]) {
-    const live = streamAvailability[k] === true;
-    const hasPlayer = !!players[k];
-
-    if (!live) {
-      markNoStream(k);
-      continue;
-    }
-
-    if (!hasPlayer) {
-      connectStream(k, STREAMS[k]);
-    }
-  }
-}
-
-async function refreshStreamStatus() {
-  const res = await fetch("/stream-status", { cache: "no-store" });
-  const data = await res.json();
-
-  applyStreamStatus(data);
-  syncLayoutToAvailability();
-  syncPlayersToAvailability();
-}
-
-async function pollStreamStatus() {
-  try {
-    const prevA = streamAvailability.A;
-    const prevB = streamAvailability.B;
-
-    await refreshStreamStatus();
-
-    if (prevA === false && streamAvailability.A === true && !players.A) {
-      connectStream("A", STREAMS.A);
-    }
-
-    if (prevB === false && streamAvailability.B === true && !players.B) {
-      connectStream("B", STREAMS.B);
-    }
-  } catch (err) {
-    console.error("stream-status poll failed", err);
-  }
-}
-
-window.addEventListener("load", async () => {
-  try {
-    await refreshStreamStatus();
-  } catch (err) {
-    console.error("initial stream-status fetch failed", err);
-
-    // Safe fallback if the status endpoint is briefly unavailable.
-    streamAvailability.A = true;
-    streamAvailability.B = true;
-    setLayout("both");
-    connectStream("A", STREAMS.A);
-    connectStream("B", STREAMS.B);
-  }
-
-  setInterval(pollStreamStatus, statusPollMs);
-});
-</script>
+      setInterval(pollStreamStatus, statusPollMs);
+    });
+  </script>
 </body>
+
 </html>

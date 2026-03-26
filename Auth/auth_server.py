@@ -187,6 +187,18 @@ class Handler(BaseHTTPRequestHandler):
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tailwind Tech Streaming</title>
+  <meta property="og:title" content="Tailwind Tech Streaming" />
+<meta property="og:description" content="Secure streaming viewer." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://stream.andybader.com/" />
+<meta property="og:image" content="https://stream.andybader.com/share-preview.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Tailwind Tech Streaming" />
+<meta name="twitter:description" content="Secure streaming viewer." />
+<meta name="twitter:image" content="https://stream.andybader.com/share-preview.png" />
   <style>
     :root {{
       --graphite: #343638;

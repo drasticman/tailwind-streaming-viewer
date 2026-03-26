@@ -12,6 +12,11 @@ stream.andybader.com {
 		reverse_proxy 127.0.0.1:8081
 	}
 
+	handle /share-preview.png {
+		root * C:\streaming\web
+		file_server
+	}
+
 	route {
 		forward_auth 127.0.0.1:8081 {
 			uri /auth/check
@@ -31,6 +36,14 @@ stream.andybader.com {
 
 		handle /B_Cam* {
 			reverse_proxy 127.0.0.1:8889
+		}
+
+		handle /C_Cam* {
+			reverse_proxy 127.0.0.1:8889
+		}
+
+		handle /MultiAudio* {
+			reverse_proxy 127.0.0.1:8888
 		}
 
 		root * C:\streaming\web
