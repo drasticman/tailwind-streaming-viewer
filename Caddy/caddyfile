@@ -1,4 +1,4 @@
-stream.andybader.com {
+stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
 
 	handle /login* {
 		reverse_proxy 127.0.0.1:8081
