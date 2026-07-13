@@ -11,6 +11,8 @@ import html
 import json
 import os
 
+print("RUNNING AUTH SERVER FILE:", os.path.abspath(__file__))
+
 HOST = "127.0.0.1"
 PORT = 8081
 
@@ -101,6 +103,8 @@ def get_stream_status() -> dict:
     try:
         with urllib.request.urlopen(MEDIAMTX_PATHS_URL, timeout=1.5) as response:
             payload = json.loads(response.read().decode("utf-8"))
+        
+        print("MediaMTX payload:", payload)
 
         status = {}
         for item in payload.get("items", []):
@@ -113,9 +117,14 @@ def get_stream_status() -> dict:
 
             status[name] = ready and available
 
+        print("Calculated status:", status)
+
         return status
 
-    except Exception:
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"get_stream_status failed: {e}")
         return {}
 
 

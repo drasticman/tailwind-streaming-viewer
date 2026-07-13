@@ -305,6 +305,73 @@
       display: none;
     }
 
+
+    .placeholder-page {
+      min-height: calc(100vh - 65px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .placeholder-card {
+      width: min(680px, 100%);
+      background: var(--deep-space);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 20px;
+      padding: 32px;
+      text-align: center;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    }
+
+    .placeholder-card img {
+      width: min(260px, 70%);
+      height: auto;
+      margin-bottom: 24px;
+      opacity: 0.9;
+    }
+
+    .placeholder-card h1 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 5vw, 42px);
+      line-height: 1.1;
+      color: var(--cloudless);
+    }
+
+    .placeholder-card p {
+      margin: 0 auto;
+      max-width: 620px;
+      color: var(--storm-watch);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .placeholder-card .placeholder-contact {
+      margin-top: 18px;
+      max-width: 680px;
+      color: white;
+      font-weight: 650;
+    }
+
+    .placeholder-card .placeholder-email {
+      margin-top: 6px;
+      color: var(--cloudless);
+      font-weight: 650;
+    }
+
+    .placeholder-email a,
+    .placeholder-email a:visited,
+    .placeholder-email a:active,
+    .placeholder-email a:-webkit-any-link {
+      color: var(--cloudless) !important;
+      text-decoration: none;
+    }
+
+    .placeholder-email a:hover {
+      text-decoration: underline;
+    }
+
+
     @media (max-width: 900px) {
       .grid {
         grid-template-columns: 1fr;
@@ -383,6 +450,22 @@
         z-index: 60;
       }
 
+
+      .placeholder-page {
+        min-height: calc(100vh - 49px);
+        padding: 20px 10px;
+      }
+
+      .placeholder-card {
+        padding: 24px 18px;
+        border-radius: 16px;
+      }
+
+      .placeholder-card p {
+        font-size: 15px;
+      }
+
+
       .panel {
         border-radius: 14px;
       }
@@ -411,7 +494,7 @@
       <img src="./logo.png" alt="Tailwind Tech Streaming">
       <div>
         <div class="brand-title">Tailwind Tech Streaming</div>
-        <div id="brand-subtitle" class="brand-subtitle">Low-latency separate camera viewer</div>
+        <div id="brand-subtitle" class="brand-subtitle">Low-latency camera viewer</div>
       </div>
     </div>
 
@@ -442,6 +525,25 @@
   </header>
 
   <main>
+    <section id="placeholder-page" class="placeholder-page hidden">
+      <div class="placeholder-card">
+        <img src="./logo.png" alt="Tailwind Tech Streaming">
+        <h1>No streams scheduled</h1>
+        <p>Tailwind Tech Streaming is ready for live production monitoring, but there are no camera feeds expected right
+          now.</p>
+        <p class="placeholder-contact">
+          For remote viewing, on-set streaming, or quote requests,
+          contact us at:
+        </p>
+
+        <p class="placeholder-email">
+          <a href="mailto:streaming@tailwindtech.xyz?subject=Streaming%20Inquiry">
+            streaming@tailwindtech.xyz
+          </a>
+        </p>
+      </div>
+    </section>
+
     <section id="live-grid" class="grid">
       <section id="panel-A" class="panel">
         <div class="panel-header">
@@ -516,18 +618,30 @@
   </main>
 
   <script>
-    const LIVE_STREAMS = { A: "A_Cam", B: "B_Cam", C: "C_Cam" };
-    const LIVE_KEYS = ["A", "B", "C"];
+    const VIEWER_CONFIG = {
+      streamsExpected: true,
+      enableRemoteAudio: false,
+      enableCCam: false,
+    };
+
+    const LIVE_STREAMS = VIEWER_CONFIG.enableCCam
+      ? { A: "A_Cam", B: "B_Cam", C: "C_Cam" }
+      : { A: "A_Cam", B: "B_Cam" };
+
+    const LIVE_KEYS = Object.keys(LIVE_STREAMS);
+
     const AUDIO_STREAM = "MultiAudio_clean";
 
     const statusPollMs = 5000;
     const reconnectBackoffMs = 3000;
+    const webrtcFallbackMs = 8000;
 
     const VIEWER_MODE_STORAGE_KEY = "tailwind-viewer-mode";
     const LIVE_LAYOUT_STORAGE_KEY = "tailwind-live-layout";
 
     const livePlayers = {};
     const liveReconnectTimers = {};
+    const liveFallbackTimers = {};
     let audioPlayer = null;
     let audioReconnectTimer = null;
 
@@ -541,12 +655,17 @@
     const params = new URLSearchParams(window.location.search);
     const urlMode = params.get("mode");
 
-    let currentMode = urlMode || localStorage.getItem(VIEWER_MODE_STORAGE_KEY) || "audio";
+    let currentMode = urlMode || localStorage.getItem(VIEWER_MODE_STORAGE_KEY) || "live";
     let currentLayout = localStorage.getItem(LIVE_LAYOUT_STORAGE_KEY) || "multi";
     let userLockedLayout = false;
 
     function updateDocumentTitle() {
       const base = "Tailwind Tech Streaming";
+
+      if (!VIEWER_CONFIG.streamsExpected) {
+        document.title = `${base} — No Streams Scheduled`;
+        return;
+      }
 
       if (currentMode === "audio") {
         document.title = `${base} — Remote`;
@@ -570,6 +689,61 @@
       audioBtn.setAttribute("aria-pressed", currentMode === "audio" ? "true" : "false");
     }
 
+    function applyStreamsExpectedMode() {
+      const placeholderPage = document.getElementById("placeholder-page");
+      const topbarControls = document.querySelector(".topbar-controls");
+      const liveGrid = document.getElementById("live-grid");
+      const audioWrap = document.getElementById("audio-wrap");
+      const subtitle = document.getElementById("brand-subtitle");
+
+      if (VIEWER_CONFIG.streamsExpected) {
+        placeholderPage?.classList.add("hidden");
+        topbarControls?.classList.remove("hidden");
+        return;
+      }
+
+      clearAllLivePlayers();
+      clearAudioPlayer();
+      placeholderPage?.classList.remove("hidden");
+      topbarControls?.classList.add("hidden");
+      liveGrid?.classList.add("hidden");
+      audioWrap?.classList.add("hidden");
+
+      if (subtitle) {
+        subtitle.textContent = "No streams currently scheduled";
+      }
+
+      updateDocumentTitle();
+    }
+
+    function applyViewerConfig() {
+      if (!VIEWER_CONFIG.enableRemoteAudio) {
+        document.getElementById("mode-btn-audio")?.classList.add("hidden");
+        document.getElementById("audio-wrap")?.classList.add("hidden");
+
+        const modeButtons = document.querySelector(".mode-buttons");
+        const infoButton = document.getElementById("info-button");
+
+        modeButtons?.classList.add("hidden");
+        infoButton?.classList.add("hidden");
+
+        if (currentMode === "audio") {
+          currentMode = "live";
+          localStorage.setItem(VIEWER_MODE_STORAGE_KEY, "live");
+        }
+      }
+
+      if (!VIEWER_CONFIG.enableCCam) {
+        document.getElementById("btn-C")?.classList.add("hidden");
+        document.getElementById("panel-C")?.classList.add("hidden");
+
+        if (currentLayout === "C") {
+          currentLayout = "multi";
+          localStorage.setItem(LIVE_LAYOUT_STORAGE_KEY, "multi");
+        }
+      }
+    }
+
     function updateLayoutButtons() {
       const ids = ["multi", "A", "B", "C"];
       for (const id of ids) {
@@ -582,8 +756,14 @@
 
     function updateSubtitle() {
       const subtitle = document.getElementById("brand-subtitle");
+
+      if (!VIEWER_CONFIG.streamsExpected) {
+        subtitle.textContent = "No streams currently scheduled";
+        return;
+      }
+
       subtitle.textContent = currentMode === "live"
-        ? "Low-latency separate camera viewer"
+        ? "Low-latency camera viewer"
         : "Combined multiview with synced audio";
     }
 
@@ -627,7 +807,10 @@
 
       document.getElementById("panel-A").classList.toggle("hidden", currentLayout !== "multi" && currentLayout !== "A");
       document.getElementById("panel-B").classList.toggle("hidden", currentLayout !== "multi" && currentLayout !== "B");
-      document.getElementById("panel-C").classList.toggle("hidden", currentLayout !== "multi" && currentLayout !== "C");
+      document.getElementById("panel-C").classList.toggle(
+        "hidden",
+        !VIEWER_CONFIG.enableCCam || (currentLayout !== "multi" && currentLayout !== "C")
+      );
 
       grid.classList.toggle("single", currentLayout !== "multi");
       updateLayoutButtons();
@@ -699,6 +882,12 @@
       liveReconnectTimers[k] = null;
     }
 
+    function stopLiveFallback(k) {
+      if (!liveFallbackTimers[k]) return;
+      clearTimeout(liveFallbackTimers[k]);
+      liveFallbackTimers[k] = null;
+    }
+
     function stopAudioReconnect() {
       if (!audioReconnectTimer) return;
       clearTimeout(audioReconnectTimer);
@@ -707,10 +896,16 @@
 
     function clearLivePlayer(k) {
       stopLiveReconnect(k);
+      stopLiveFallback(k);
 
       const player = livePlayers[k];
-      if (player) {
+
+      if (player?.kind === "webrtc") {
         try { player.reader?.close(); } catch { }
+      }
+
+      if (player?.kind === "hlsjs") {
+        try { player.hls?.destroy(); } catch { }
       }
 
       delete livePlayers[k];
@@ -798,6 +993,91 @@
       }, reconnectBackoffMs);
     }
 
+    function connectLiveHls(k, name) {
+      if (currentMode !== "live") return;
+
+      if (streamAvailability[k] !== true) {
+        markLiveNoStream(k);
+        return;
+      }
+
+      const els = getLiveEls(k);
+      const { video } = els;
+      const url = `/hls/${name}/index.m3u8`;
+
+      clearLivePlayer(k);
+      setPanelState(els, "Compatibility mode…", "reconnecting");
+      showOfflinePlaceholder(els, false);
+
+      video.muted = true;
+      video.defaultMuted = true;
+
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = url;
+        livePlayers[k] = { kind: "native-hls" };
+
+        video.onloadedmetadata = () => {
+          if (currentMode !== "live" || streamAvailability[k] !== true) return;
+          video.play().catch(() => { });
+          markLiveOk(k, "HLS");
+        };
+
+        video.onerror = () => {
+          console.error(`[${k}] native HLS error`);
+          scheduleLiveReconnect(k);
+        };
+
+        video.onstalled = () => {
+          console.error(`[${k}] native HLS stalled`);
+          scheduleLiveReconnect(k);
+        };
+
+        return;
+      }
+
+      if (window.Hls && Hls.isSupported()) {
+        const hls = new Hls({
+          lowLatencyMode: true
+        });
+
+        livePlayers[k] = {
+          kind: "hlsjs",
+          hls
+        };
+
+        hls.loadSource(url);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (currentMode !== "live" || streamAvailability[k] !== true) return;
+          video.play().catch(() => { });
+          markLiveOk(k, "HLS");
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (!data?.fatal) return;
+
+          console.error(`[${k}] fatal HLS error`, data);
+          scheduleLiveReconnect(k);
+        });
+
+        video.onerror = () => {
+          console.error(`[${k}] HLS video error`);
+          scheduleLiveReconnect(k);
+        };
+
+        video.onstalled = () => {
+          console.error(`[${k}] HLS stalled`);
+          scheduleLiveReconnect(k);
+        };
+
+        return;
+      }
+
+      setPanelState(els, "HLS unsupported");
+      showOfflinePlaceholder(els, true);
+    }
+
     function connectLiveStream(k, name, isReconnect = false) {
       if (currentMode !== "live") return;
 
@@ -819,25 +1099,78 @@
       try {
         const reader = new MediaMTXWebRTCReader({
           url: `${window.location.origin}/webrtc/${name}/whep`,
+
           onTrack: (evt) => {
-            if (currentMode !== "live" || streamAvailability[k] !== true) {
-              clearLivePlayer(k);
+            const currentPlayer = livePlayers[k];
+
+            if (
+              currentMode !== "live" ||
+              streamAvailability[k] !== true ||
+              currentPlayer?.kind !== "webrtc" ||
+              currentPlayer.reader !== reader
+            ) {
               return;
             }
 
             video.srcObject = evt.streams[0];
-            livePlayers[k] = { reader };
+            setPanelState(els, "Waiting for video…", "reconnecting");
+
+            video.onplaying = () => {
+              const activePlayer = livePlayers[k];
+
+              if (
+                activePlayer?.kind !== "webrtc" ||
+                activePlayer.reader !== reader
+              ) {
+                return;
+              }
+
+              stopLiveFallback(k);
+              markLiveOk(k, "WebRTC");
+            };
 
             video.play().catch(() => { });
-            markLiveOk(k, "WebRTC");
           },
           onError: (err) => {
+            const currentPlayer = livePlayers[k];
+
+            if (
+              currentPlayer?.kind !== "webrtc" ||
+              currentPlayer.reader !== reader
+            ) {
+              return;
+            }
+
             console.error(`[${k}] WebRTC error:`, err);
-            scheduleLiveReconnect(k);
+            setPanelState(els, "Trying alternate connection…", "reconnecting");
           }
         });
 
-        livePlayers[k] = { reader };
+        livePlayers[k] = {
+          kind: "webrtc",
+          reader
+        };
+
+        liveFallbackTimers[k] = setTimeout(() => {
+          liveFallbackTimers[k] = null;
+
+          const currentPlayer = livePlayers[k];
+
+          if (
+            currentMode !== "live" ||
+            streamAvailability[k] !== true ||
+            currentPlayer?.kind !== "webrtc" ||
+            currentPlayer.reader !== reader
+          ) {
+            return;
+          }
+
+          console.warn(
+            `[${k}] WebRTC did not produce video within ${webrtcFallbackMs}ms; switching to HLS`
+          );
+
+          connectLiveHls(k, name);
+        }, webrtcFallbackMs);
 
         video.onerror = () => {
           console.error(`[${k}] video error event`);
@@ -850,7 +1183,7 @@
         };
       } catch (err) {
         console.error(`[${k}] WebRTC setup exception:`, err);
-        scheduleLiveReconnect(k);
+        connectLiveHls(k, name);
       }
     }
 
@@ -1019,6 +1352,13 @@
     });
 
     window.addEventListener("load", async () => {
+      applyViewerConfig();
+      applyStreamsExpectedMode();
+
+      if (!VIEWER_CONFIG.streamsExpected) {
+        return;
+      }
+
       updateModeButtons();
       updateLayoutButtons();
       updateSubtitle();

@@ -1,5 +1,6 @@
 stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
 
+	# Login page and assets must remain public.
 	handle /login* {
 		reverse_proxy 127.0.0.1:8081
 	}
@@ -8,18 +9,14 @@ stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
 		reverse_proxy 127.0.0.1:8081
 	}
 
-	handle /stream-status* {
-		reverse_proxy 127.0.0.1:8081
-	}
-
-	handle /share-preview.png {
-		root * C:\streaming\web
-		file_server
-	}
-
+	# Everything below this point requires authentication.
 	route {
 		forward_auth 127.0.0.1:8081 {
 			uri /auth/check
+		}
+
+		handle /stream-status* {
+			reverse_proxy 127.0.0.1:8081
 		}
 
 		handle_path /webrtc/* {
@@ -46,7 +43,15 @@ stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
 			reverse_proxy 127.0.0.1:8888
 		}
 
-		root * C:\streaming\web
-		file_server
+		# Viewer HTML, JavaScript, logos, and other static files.
+		handle {
+			root * C:\streaming\web
+			file_server
+		}
 	}
+}
+
+files.tailwindtech.xyz {
+	root * C:\Streaming\SharedFiles
+	file_server browse
 }
