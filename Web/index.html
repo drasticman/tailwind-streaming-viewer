@@ -484,14 +484,14 @@
     }
   </style>
 
-  <script defer src="./reader.js"></script>
+  <script defer src="/reader.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.6.13/hls.min.js"></script>
 </head>
 
 <body>
   <header class="topbar">
     <div class="brand">
-      <img src="./logo.png" alt="Tailwind Tech Streaming">
+      <img src="/logo.png" alt="Tailwind Tech Streaming">
       <div>
         <div class="brand-title">Tailwind Tech Streaming</div>
         <div id="brand-subtitle" class="brand-subtitle">Low-latency camera viewer</div>
@@ -527,7 +527,7 @@
   <main>
     <section id="placeholder-page" class="placeholder-page hidden">
       <div class="placeholder-card">
-        <img src="./logo.png" alt="Tailwind Tech Streaming">
+        <img src="/logo.png" alt="Tailwind Tech Streaming">
         <h1>No streams scheduled</h1>
         <p>Tailwind Tech Streaming is ready for live production monitoring, but there are no camera feeds expected right
           now.</p>
@@ -556,7 +556,7 @@
         <div class="media-wrap">
           <video id="video-A" autoplay muted playsinline controls></video>
           <div id="offline-A" class="offline-placeholder">
-            <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+            <img src="/fulllogo.png" alt="Tailwind Tech Streaming">
             <div class="offline-title">No stream</div>
           </div>
         </div>
@@ -573,7 +573,7 @@
         <div class="media-wrap">
           <video id="video-B" autoplay muted playsinline controls></video>
           <div id="offline-B" class="offline-placeholder">
-            <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+            <img src="/fulllogo.png" alt="Tailwind Tech Streaming">
             <div class="offline-title">No stream</div>
           </div>
         </div>
@@ -590,7 +590,7 @@
         <div class="media-wrap">
           <video id="video-C" autoplay muted playsinline controls></video>
           <div id="offline-C" class="offline-placeholder">
-            <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+            <img src="/fulllogo.png" alt="Tailwind Tech Streaming">
             <div class="offline-title">No stream</div>
           </div>
         </div>
@@ -609,7 +609,7 @@
         <div class="media-wrap">
           <video id="video-M" autoplay playsinline controls></video>
           <div id="offline-M" class="offline-placeholder">
-            <img src="./fulllogo.png" alt="Tailwind Tech Streaming">
+            <img src="/fulllogo.png" alt="Tailwind Tech Streaming">
             <div class="offline-title">No stream</div>
           </div>
         </div>
@@ -618,26 +618,19 @@
   </main>
 
   <script>
-    const VIEWER_CONFIG = {
-      streamsExpected: true,
-      enableRemoteAudio: false,
-      enableCCam: false,
-    };
-
-    const LIVE_STREAMS = VIEWER_CONFIG.enableCCam
-      ? { A: "A_Cam", B: "B_Cam", C: "C_Cam" }
-      : { A: "A_Cam", B: "B_Cam" };
-
-    const LIVE_KEYS = Object.keys(LIVE_STREAMS);
-
-    const AUDIO_STREAM = "MultiAudio_clean";
+    let PROJECT_SLUG = null;
+    let PROJECT_CONFIG = null;
+    let VIEWER_CONFIG = null;
+    let LIVE_STREAMS = {};
+    let LIVE_KEYS = [];
+    let AUDIO_STREAM = null;
 
     const statusPollMs = 5000;
     const reconnectBackoffMs = 3000;
     const webrtcFallbackMs = 8000;
 
-    const VIEWER_MODE_STORAGE_KEY = "tailwind-viewer-mode";
-    const LIVE_LAYOUT_STORAGE_KEY = "tailwind-live-layout";
+    let VIEWER_MODE_STORAGE_KEY = "tailwind-viewer-mode";
+    let LIVE_LAYOUT_STORAGE_KEY = "tailwind-live-layout";
 
     const livePlayers = {};
     const liveReconnectTimers = {};
@@ -652,15 +645,106 @@
       M: null
     };
 
-    const params = new URLSearchParams(window.location.search);
-    const urlMode = params.get("mode");
-
-    let currentMode = urlMode || localStorage.getItem(VIEWER_MODE_STORAGE_KEY) || "live";
-    let currentLayout = localStorage.getItem(LIVE_LAYOUT_STORAGE_KEY) || "multi";
+    let currentMode = "live";
+    let currentLayout = "multi";
     let userLockedLayout = false;
 
+    async function resolveProjectSlug() {
+      const parts = window.location.pathname.split("/").filter(Boolean);
+
+      if (parts.length === 0) {
+        const response = await fetch("/projects/main.json", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Unable to load main project (${response.status})`);
+        }
+
+        const mainConfig = await response.json();
+        const mainProject = String(mainConfig.mainProject || "").trim();
+        if (!mainProject) {
+          throw new Error("projects/main.json does not contain mainProject");
+        }
+
+        window.location.replace(`/${encodeURIComponent(mainProject)}/`);
+        return null;
+      }
+
+      return decodeURIComponent(parts[0]).toLowerCase();
+    }
+
+    async function loadProjectConfig(slug) {
+      const response = await fetch(`/projects/${encodeURIComponent(slug)}.json`, {
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        throw new Error(`Project '${slug}' was not found (${response.status})`);
+      }
+
+      const config = await response.json();
+      const streams = config.streams || {};
+
+      PROJECT_SLUG = slug;
+      PROJECT_CONFIG = config;
+      LIVE_STREAMS = {};
+
+      for (const key of ["A", "B", "C"]) {
+        const path = typeof streams[key] === "string" ? streams[key].trim() : "";
+        if (path) LIVE_STREAMS[key] = path;
+      }
+
+      LIVE_KEYS = Object.keys(LIVE_STREAMS);
+      AUDIO_STREAM = typeof config.audioStream === "string"
+        ? config.audioStream.trim()
+        : "";
+
+      VIEWER_CONFIG = {
+        streamsExpected: config.streamsExpected !== false,
+        enableRemoteAudio: Boolean(config.enableRemoteAudio && AUDIO_STREAM),
+        enableCCam: Boolean(LIVE_STREAMS.C),
+        transportMode: ["auto", "webrtc", "hls"].includes(config.transportMode)
+          ? config.transportMode
+          : "auto"
+      };
+
+      VIEWER_MODE_STORAGE_KEY = `tailwind-viewer-mode:${PROJECT_SLUG}`;
+      LIVE_LAYOUT_STORAGE_KEY = `tailwind-live-layout:${PROJECT_SLUG}`;
+
+      const params = new URLSearchParams(window.location.search);
+      const urlMode = params.get("mode");
+      currentMode = urlMode || localStorage.getItem(VIEWER_MODE_STORAGE_KEY) || "live";
+      currentLayout = localStorage.getItem(LIVE_LAYOUT_STORAGE_KEY) || "multi";
+
+      if (!LIVE_STREAMS[currentLayout] && currentLayout !== "multi") {
+        currentLayout = "multi";
+      }
+
+      const projectName = config.name || slug;
+      document.documentElement.dataset.project = slug;
+      document.querySelector(".brand-title").textContent = `Tailwind Tech Streaming — ${projectName}`;
+    }
+
+    function showStartupError(err) {
+      console.error("Viewer startup failed:", err);
+
+      const placeholderPage = document.getElementById("placeholder-page");
+      const topbarControls = document.querySelector(".topbar-controls");
+      const liveGrid = document.getElementById("live-grid");
+      const audioWrap = document.getElementById("audio-wrap");
+      const title = placeholderPage?.querySelector("h1");
+      const description = placeholderPage?.querySelector("p");
+
+      topbarControls?.classList.add("hidden");
+      liveGrid?.classList.add("hidden");
+      audioWrap?.classList.add("hidden");
+      placeholderPage?.classList.remove("hidden");
+
+      if (title) title.textContent = "Viewer unavailable";
+      if (description) description.textContent = err?.message || String(err);
+    }
+
     function updateDocumentTitle() {
-      const base = "Tailwind Tech Streaming";
+      const projectName = PROJECT_CONFIG?.name || PROJECT_SLUG || "Viewer";
+      const base = `Tailwind Tech Streaming — ${projectName}`;
 
       if (!VIEWER_CONFIG.streamsExpected) {
         document.title = `${base} — No Streams Scheduled`;
@@ -970,7 +1054,7 @@
 
       liveReconnectTimers[k] = setTimeout(() => {
         liveReconnectTimers[k] = null;
-        connectLiveStream(k, LIVE_STREAMS[k], true);
+        connectPreferredLiveStream(k, LIVE_STREAMS[k], true);
       }, reconnectBackoffMs);
     }
 
@@ -1151,26 +1235,28 @@
           reader
         };
 
-        liveFallbackTimers[k] = setTimeout(() => {
-          liveFallbackTimers[k] = null;
+        if (VIEWER_CONFIG.transportMode === "auto") {
+          liveFallbackTimers[k] = setTimeout(() => {
+            liveFallbackTimers[k] = null;
 
-          const currentPlayer = livePlayers[k];
+            const currentPlayer = livePlayers[k];
 
-          if (
-            currentMode !== "live" ||
-            streamAvailability[k] !== true ||
-            currentPlayer?.kind !== "webrtc" ||
-            currentPlayer.reader !== reader
-          ) {
-            return;
-          }
+            if (
+              currentMode !== "live" ||
+              streamAvailability[k] !== true ||
+              currentPlayer?.kind !== "webrtc" ||
+              currentPlayer.reader !== reader
+            ) {
+              return;
+            }
 
-          console.warn(
-            `[${k}] WebRTC did not produce video within ${webrtcFallbackMs}ms; switching to HLS`
-          );
+            console.warn(
+              `[${k}] WebRTC did not produce video within ${webrtcFallbackMs}ms; switching to HLS`
+            );
 
-          connectLiveHls(k, name);
-        }, webrtcFallbackMs);
+            connectLiveHls(k, name);
+          }, webrtcFallbackMs);
+        }
 
         video.onerror = () => {
           console.error(`[${k}] video error event`);
@@ -1183,8 +1269,22 @@
         };
       } catch (err) {
         console.error(`[${k}] WebRTC setup exception:`, err);
-        connectLiveHls(k, name);
+
+        if (VIEWER_CONFIG.transportMode === "auto") {
+          connectLiveHls(k, name);
+        } else {
+          setPanelState(els, "WebRTC unavailable", "reconnecting");
+        }
       }
+    }
+
+    function connectPreferredLiveStream(k, name, isReconnect = false) {
+      if (VIEWER_CONFIG.transportMode === "hls") {
+        connectLiveHls(k, name);
+        return;
+      }
+
+      connectLiveStream(k, name, isReconnect);
     }
 
     function connectAudioStream(isReconnect = false) {
@@ -1259,10 +1359,12 @@
     }
 
     function applyStreamStatus(data) {
-      streamAvailability.A = data.A_Cam === true;
-      streamAvailability.B = data.B_Cam === true;
-      streamAvailability.C = data.C_Cam === true;
-      streamAvailability.M = data.MultiAudio_clean === true;
+      for (const key of ["A", "B", "C"]) {
+        const path = LIVE_STREAMS[key];
+        streamAvailability[key] = Boolean(path && data[path] === true);
+      }
+
+      streamAvailability.M = Boolean(AUDIO_STREAM && data[AUDIO_STREAM] === true);
     }
 
     function getLiveKeys() {
@@ -1294,7 +1396,7 @@
         }
 
         if (!hasPlayer) {
-          connectLiveStream(k, LIVE_STREAMS[k]);
+          connectPreferredLiveStream(k, LIVE_STREAMS[k]);
         }
       }
     }
@@ -1352,6 +1454,16 @@
     });
 
     window.addEventListener("load", async () => {
+      try {
+        const slug = await resolveProjectSlug();
+        if (!slug) return;
+
+        await loadProjectConfig(slug);
+      } catch (err) {
+        showStartupError(err);
+        return;
+      }
+
       applyViewerConfig();
       applyStreamsExpectedMode();
 

@@ -20,7 +20,9 @@ stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
 		}
 
 		handle_path /webrtc/* {
-			reverse_proxy 127.0.0.1:8889
+			reverse_proxy 127.0.0.1:8889 {
+				header_down Location ^/(.*)$ /webrtc/$1
+			}
 		}
 
 		handle_path /hls/* {
@@ -43,9 +45,10 @@ stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
 			reverse_proxy 127.0.0.1:8888
 		}
 
-		# Viewer HTML, JavaScript, logos, and other static files.
+		# Viewer assets, project JSON, and project URLs all use one shared viewer.
 		handle {
 			root * C:\streaming\web
+			try_files {path} /index.html
 			file_server
 		}
 	}
