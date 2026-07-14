@@ -1,11 +1,76 @@
-# Tailwind Streaming Server Monitor v0.1
-# Read-only dashboard: this script does not start, stop, or restart services.
+# Tailwind Streaming Server Monitor v0.2
+# Launches the streaming stack, then provides a status dashboard.
+# This version does not stop, restart, or automatically recover services.
 
 $ErrorActionPreference = 'SilentlyContinue'
 
 $StreamRoot = 'C:\Streaming'
 $MediaMtxApi = 'http://127.0.0.1:9997/v3/paths/list'
 $RefreshSeconds = 2
+
+
+$MediaMtxDir = 'C:\Apps\MediaMTX'
+$CaddyDir = Join-Path $StreamRoot 'Caddy'
+$AuthDir = Join-Path $StreamRoot 'Auth'
+
+function Start-ConsoleService {
+    param(
+        [string]$WindowTitle,
+        [string]$WorkingDirectory,
+        [string]$Command
+    )
+
+    $cmdLine = "title $WindowTitle && cd /d `"$WorkingDirectory`" && $Command"
+
+    return Start-Process `
+        -FilePath 'cmd.exe' `
+        -ArgumentList @('/k', $cmdLine) `
+        -WindowStyle Minimized `
+        -PassThru
+}
+
+function Start-StreamingServices {
+    $launched = @{}
+
+    if (-not (Get-ProcessMatch -Name 'mediamtx.exe')) {
+        $launched.MediaMTX = Start-ConsoleService `
+            -WindowTitle 'MediaMTX' `
+            -WorkingDirectory $MediaMtxDir `
+            -Command 'mediamtx.exe'
+    }
+
+    if (-not (Get-ProcessMatch -Name 'caddy.exe')) {
+        $launched.Caddy = Start-ConsoleService `
+            -WindowTitle 'Caddy' `
+            -WorkingDirectory $CaddyDir `
+            -Command 'caddy run --config Caddyfile'
+    }
+
+    if (-not (Get-ProcessMatch -Name 'python.exe' -CommandLinePattern 'auth_server\.py')) {
+        $authLauncher = Join-Path $AuthDir 'RestartAuthServer.bat'
+        Start-Process `
+            -FilePath 'cmd.exe' `
+            -ArgumentList @('/c', "call `"$authLauncher`"") `
+            -WindowStyle Hidden `
+            -Wait
+    }
+
+    $ffmpegRunning = Get-ProcessMatch `
+        -Name 'ffmpeg.exe' `
+        -CommandLinePattern 'MultiAudio(_clean)?'
+
+    $multiAudioWindow = Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" |
+        Where-Object { $_.CommandLine -match 'clean_multiaudio\.bat' }
+
+    if (-not $ffmpegRunning -and @($multiAudioWindow).Count -eq 0) {
+        $launched.MultiAudio = Start-ConsoleService `
+            -WindowTitle 'FFmpeg MultiAudio Clean' `
+            -WorkingDirectory $StreamRoot `
+            -Command 'call clean_multiaudio.bat'
+    }
+
+    return $launched
+}
 
 function Test-TcpPort {
     param(
@@ -158,6 +223,9 @@ function Get-DashboardData {
 
     return $data
 }
+
+$launchedProcesses = Start-StreamingServices
+Start-Sleep -Milliseconds 750
 
 $projectMetadata = Get-ProjectMetadata
 $forceRefresh = $true
