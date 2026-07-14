@@ -48,3 +48,9 @@ htmlcov/
 .env
 .env.*
 !.env.example
+
+# Local production configurations
+Web/projects/*.json
+
+# Keep public example configurations
+!Web/projects/*.example.json
