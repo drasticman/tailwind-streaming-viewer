@@ -19,8 +19,8 @@ PORT = 8081
 PASSWORD = os.getenv("STREAM_PASSWORD")
 SECRET = os.getenv("STREAM_SECRET")
 
-print("STREAM_PASSWORD =", PASSWORD)
-print("STREAM_SECRET =", SECRET)
+print("STREAM_PASSWORD loaded:", bool(PASSWORD))
+print("STREAM_SECRET loaded:", bool(SECRET))
 
 if not PASSWORD:
     raise RuntimeError("STREAM_PASSWORD is not set")
