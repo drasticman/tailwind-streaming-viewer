@@ -1,0 +1,32 @@
+{
+  "project": {
+    "name": "Example Production"
+  },
+  "viewer": {
+    "streamsExpected": true,
+    "transport": "auto",
+    "fallbackMs": 8000,
+    "defaultLayout": "multi"
+  },
+  "features": {
+    "remoteAudio": false
+  },
+  "streams": {
+    "A": {
+      "path": "Example_A",
+      "enabled": true
+    },
+    "B": {
+      "path": "Example_B",
+      "enabled": true
+    },
+    "C": {
+      "path": "Example_C",
+      "enabled": false
+    },
+    "audio": {
+      "path": "Example_MultiAudio_clean",
+      "enabled": false
+    }
+  }
+}
