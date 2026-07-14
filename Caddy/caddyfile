@@ -1,5 +1,4 @@
 stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
-
 	# Login page and assets must remain public.
 	handle /login* {
 		reverse_proxy 127.0.0.1:8081
@@ -7,6 +6,35 @@ stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
 
 	handle /fulllogo.png {
 		reverse_proxy 127.0.0.1:8081
+	}
+
+	# Public bootstrap page.
+	handle / {
+		root * C:\streaming\web
+		rewrite * /landing.html
+		file_server
+	}
+
+	handle /landing.html {
+		root * C:\streaming\web
+		file_server
+	}
+
+	# Public main-project selection.
+	handle /projects/main.json {
+		root * C:\streaming\web
+		file_server
+	}
+
+	# Public landing-page assets.
+	handle /logo.png {
+		root * C:\streaming\web
+		file_server
+	}
+
+	handle /share-preview.png {
+		root * C:\streaming\web
+		file_server
 	}
 
 	# Everything below this point requires authentication.
@@ -45,7 +73,7 @@ stream.andybader.com, stream.tailwindtech.xyz, tailwindtech.xyz {
 			reverse_proxy 127.0.0.1:8888
 		}
 
-		# Viewer assets, project JSON, and project URLs all use one shared viewer.
+		# Shared viewer, project JSON files, and viewer assets.
 		handle {
 			root * C:\streaming\web
 			try_files {path} /index.html
