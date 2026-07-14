@@ -627,8 +627,8 @@
 
     const statusPollMs = 5000;
     const reconnectBackoffMs = 3000;
-    const webrtcFallbackMs = 8000;
 
+    let webrtcFallbackMs = 8000;
     let VIEWER_MODE_STORAGE_KEY = "tailwind-viewer-mode";
     let LIVE_LAYOUT_STORAGE_KEY = "tailwind-live-layout";
 
@@ -681,6 +681,10 @@
       }
 
       const config = await response.json();
+
+      const project = config.project || {};
+      const viewer = config.viewer || {};
+      const features = config.features || {};
       const streams = config.streams || {};
 
       PROJECT_SLUG = slug;
@@ -688,39 +692,86 @@
       LIVE_STREAMS = {};
 
       for (const key of ["A", "B", "C"]) {
-        const path = typeof streams[key] === "string" ? streams[key].trim() : "";
-        if (path) LIVE_STREAMS[key] = path;
+        const streamConfig = streams[key] || {};
+        const enabled = streamConfig.enabled === true;
+        const path = typeof streamConfig.path === "string"
+          ? streamConfig.path.trim()
+          : "";
+
+        if (enabled && path) {
+          LIVE_STREAMS[key] = path;
+        }
       }
 
       LIVE_KEYS = Object.keys(LIVE_STREAMS);
-      AUDIO_STREAM = typeof config.audioStream === "string"
-        ? config.audioStream.trim()
+
+      const audioConfig = streams.audio || {};
+      const audioEnabled = audioConfig.enabled === true;
+      AUDIO_STREAM = typeof audioConfig.path === "string"
+        ? audioConfig.path.trim()
         : "";
 
+      const requestedTransport = String(viewer.transport || "auto").toLowerCase();
+
       VIEWER_CONFIG = {
-        streamsExpected: config.streamsExpected !== false,
-        enableRemoteAudio: Boolean(config.enableRemoteAudio && AUDIO_STREAM),
+        streamsExpected: viewer.streamsExpected !== false,
+
+        enableRemoteAudio: Boolean(
+          features.remoteAudio === true &&
+          audioEnabled &&
+          AUDIO_STREAM
+        ),
+
         enableCCam: Boolean(LIVE_STREAMS.C),
-        transportMode: ["auto", "webrtc", "hls"].includes(config.transportMode)
-          ? config.transportMode
+
+        transportMode: ["auto", "webrtc", "hls"].includes(requestedTransport)
+          ? requestedTransport
           : "auto"
       };
+
+      const configuredFallbackMs = Number(viewer.fallbackMs);
+
+      webrtcFallbackMs =
+        Number.isFinite(configuredFallbackMs) && configuredFallbackMs >= 0
+          ? configuredFallbackMs
+          : 8000;
 
       VIEWER_MODE_STORAGE_KEY = `tailwind-viewer-mode:${PROJECT_SLUG}`;
       LIVE_LAYOUT_STORAGE_KEY = `tailwind-live-layout:${PROJECT_SLUG}`;
 
       const params = new URLSearchParams(window.location.search);
       const urlMode = params.get("mode");
-      currentMode = urlMode || localStorage.getItem(VIEWER_MODE_STORAGE_KEY) || "live";
-      currentLayout = localStorage.getItem(LIVE_LAYOUT_STORAGE_KEY) || "multi";
 
-      if (!LIVE_STREAMS[currentLayout] && currentLayout !== "multi") {
+      currentMode =
+        urlMode ||
+        localStorage.getItem(VIEWER_MODE_STORAGE_KEY) ||
+        "live";
+
+      const configuredLayout =
+        typeof viewer.defaultLayout === "string"
+          ? viewer.defaultLayout
+          : "multi";
+
+      currentLayout =
+        localStorage.getItem(LIVE_LAYOUT_STORAGE_KEY) ||
+        configuredLayout;
+
+      if (
+        currentLayout !== "multi" &&
+        !LIVE_STREAMS[currentLayout]
+      ) {
         currentLayout = "multi";
       }
 
-      const projectName = config.name || slug;
+      const projectName =
+        typeof project.name === "string" && project.name.trim()
+          ? project.name.trim()
+          : slug;
+
       document.documentElement.dataset.project = slug;
-      document.querySelector(".brand-title").textContent = `Tailwind Tech Streaming — ${projectName}`;
+
+      document.querySelector(".brand-title").textContent =
+        `Tailwind Tech Streaming — ${projectName}`;
     }
 
     function showStartupError(err) {
@@ -743,7 +794,10 @@
     }
 
     function updateDocumentTitle() {
-      const projectName = PROJECT_CONFIG?.name || PROJECT_SLUG || "Viewer";
+      const projectName =
+        PROJECT_CONFIG?.project?.name ||
+        PROJECT_SLUG ||
+        "Viewer";
       const base = `Tailwind Tech Streaming — ${projectName}`;
 
       if (!VIEWER_CONFIG.streamsExpected) {
