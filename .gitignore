@@ -19,3 +19,10 @@ desktop.ini
 *.zip
 
 Caddy/caddy.exe
+# Local secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+Auth/RotatePassword.ps1
+config.local.json
+*.local.json
