@@ -1,4 +1,4 @@
-# Tailwind Streaming Server Monitor v0.2
+# Tailwind Streaming Server Monitor v0.3.1
 # Launches the streaming stack, then provides a status dashboard.
 # This version does not stop, restart, or automatically recover services.
 
@@ -12,6 +12,63 @@ $RefreshSeconds = 2
 $MediaMtxDir = 'C:\Apps\MediaMTX'
 $CaddyDir = Join-Path $StreamRoot 'Caddy'
 $AuthDir = Join-Path $StreamRoot 'Auth'
+
+
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class TailwindWindowControl
+{
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+'@
+
+$ServiceWindows = @{
+    D1 = 'MediaMTX'
+    D2 = 'Caddy'
+    D3 = 'Auth Server'
+    D4 = 'FFmpeg MultiAudio Clean'
+}
+
+function Get-ServiceWindow {
+    param([string]$WindowTitle)
+
+    Get-Process |
+        Where-Object {
+            $_.MainWindowHandle -ne 0 -and
+            $_.MainWindowTitle.StartsWith($WindowTitle, [System.StringComparison]::OrdinalIgnoreCase)
+        } |
+        Select-Object -First 1
+}
+
+function Toggle-ServiceWindow {
+    param([string]$WindowTitle)
+
+    $process = Get-ServiceWindow -WindowTitle $WindowTitle
+    if (-not $process) {
+        return $false
+    }
+
+    $handle = $process.MainWindowHandle
+
+    if ([TailwindWindowControl]::IsIconic($handle)) {
+        [void][TailwindWindowControl]::ShowWindowAsync($handle, 9)
+        [void][TailwindWindowControl]::SetForegroundWindow($handle)
+    }
+    else {
+        [void][TailwindWindowControl]::ShowWindowAsync($handle, 2)
+    }
+
+    return $true
+}
 
 function Start-ConsoleService {
     param(
@@ -293,7 +350,7 @@ while ($true) {
     Write-Host ''
     Write-Host '------------------------------------------------------------' -ForegroundColor DarkGray
     Write-Host ("Last refresh: {0}    Refresh: {1}s" -f (Get-Date -Format 'yyyy-MM-dd hh:mm:ss tt'), $RefreshSeconds)
-    Write-Host 'Q = close monitor    R = refresh now' -ForegroundColor DarkGray
+    Write-Host '1-4 = toggle consoles    R = refresh now    Q = close monitor' -ForegroundColor DarkGray
 
     $deadline = (Get-Date).AddSeconds($RefreshSeconds)
     while ((Get-Date) -lt $deadline) {
@@ -303,6 +360,13 @@ while ($true) {
                 return
             }
             if ($key -eq [ConsoleKey]::R) {
+                $forceRefresh = $true
+                break
+            }
+
+            $keyName = $key.ToString()
+            if ($ServiceWindows.ContainsKey($keyName)) {
+                [void](Toggle-ServiceWindow -WindowTitle $ServiceWindows[$keyName])
                 $forceRefresh = $true
                 break
             }
