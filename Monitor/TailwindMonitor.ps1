@@ -108,8 +108,7 @@ function Start-StreamingServices {
         Start-Process `
             -FilePath 'cmd.exe' `
             -ArgumentList @('/c', "call `"$authLauncher`"") `
-            -WindowStyle Hidden `
-            -Wait
+            -WindowStyle Hidden
     }
 
     $ffmpegRunning = Get-ProcessMatch `

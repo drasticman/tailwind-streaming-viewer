@@ -51,3 +51,7 @@ htmlcov/
 
 # Local production project configurations
 Web/projects/*.json
+
+# Syncthing
+.stfolder
+.stignore
