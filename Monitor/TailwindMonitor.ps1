@@ -130,20 +130,6 @@ function Start-StreamingServices {
     return $launched
 }
 
-function Get-ProcessMatch {
-    param(
-        [string]$Name,
-        [string]$CommandLinePattern = ''
-    )
-
-    $items = Get-CimInstance Win32_Process -Filter "Name='$Name'"
-    if ([string]::IsNullOrWhiteSpace($CommandLinePattern)) {
-        return @($items).Count -gt 0
-    }
-
-    return @($items | Where-Object { $_.CommandLine -match $CommandLinePattern }).Count -gt 0
-}
-
 function Get-ProjectMetadata {
     $result = @{
         MainProject = $null
