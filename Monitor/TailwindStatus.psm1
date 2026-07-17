@@ -51,4 +51,37 @@ function Get-ProcessMatch {
     ).Count -gt 0
 }
 
-Export-ModuleMember -Function Test-TcpPort, Get-ProcessMatch
+function Get-TailwindStatus {
+    $services = [PSCustomObject]@{
+        MediaMTX = [PSCustomObject]@{
+            Running = Get-ProcessMatch -Name 'mediamtx.exe'
+        }
+
+        AuthServer = [PSCustomObject]@{
+            Running = Get-ProcessMatch `
+                -Name 'python.exe' `
+                -CommandLinePattern 'auth_server\.py'
+        }
+
+        Caddy = [PSCustomObject]@{
+            Running = Get-ProcessMatch -Name 'caddy.exe'
+        }
+
+        MultiAudioFfmpeg = [PSCustomObject]@{
+            Running = Get-ProcessMatch `
+                -Name 'ffmpeg.exe' `
+                -CommandLinePattern 'MultiAudio(_clean)?'
+        }
+    }
+
+    return [PSCustomObject]@{
+        ComputerName = $env:COMPUTERNAME
+        Timestamp    = Get-Date
+        Services     = $services
+    }
+}
+
+Export-ModuleMember -Function `
+    Test-TcpPort, `
+    Get-ProcessMatch, `
+    Get-TailwindStatus
